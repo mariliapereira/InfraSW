@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+void* validateLine(void *datastruct);
+void* validateCol(void *datastruct);
+void* validateSub(void *datastruct);
+
 typedef struct inputstruct
 {
     int size;
@@ -10,17 +14,20 @@ typedef struct inputstruct
     int **matrix;
 } input;
 
-int validateLine(int i, input in);
-int validateCol(int j, input in);
-int validateSub(int k, input in);
+typedef struct
+{
+    input *info;
+    int i;
+    int *invalid;
+} datastruct;
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     int n, m, a, b;
     FILE *fp;
     FILE *fOut;
 
-    fp = fopen(argv[1], "r"); 
+    fp = fopen(argv[1], "r");
     fOut = fopen("sudoku_msap.out", "w");
     if (fp == NULL)
     {
@@ -50,118 +57,119 @@ int main(int argc, char* argv[])
     info.a = a;
     info.b = b;
     info.size = n;
-    info.matrix = (int **)malloc(n * sizeof(int *));
+    info.matrix = (int **)malloc(n * sizeof(int *)); // reservar numero de linha
     for (int i = 0; i < n; i++)
     {
-        info.matrix[i] = (int *)malloc(n * sizeof(int));
+        info.matrix[i] = (int *)malloc(n * sizeof(int)); // reservar numero de coluna
         for (int j = 0; j < n; j++)
         {
             fscanf(fp, "%d", &info.matrix[i][j]);
         }
     }
+    int invalid = 0;
 
     for (int i = 0; i < n; i++)
     {
-        if (validateLine(i, info))
-        {
-            fprintf(fOut, "FAIL");
-            return 1;
-        }
-        if (validateCol(i, info))
-        {
-            fprintf(fOut, "FAIL");
-            return 1;
-        }
-        if (validateSub(i, info))
-        {
-            fprintf(fOut, "FAIL");
-            return 1;
-        }
+        datastruct data;
+        data.info = &info;
+        data.i = i;
+        data.invalid = &invalid;
+        
+        validateLine(&data);
+        validateCol(&data);
+        validateSub(&data);
     }
-
+    if (invalid)
+    {
+        fprintf(fOut, "FAIL");
+        return 1;
+    }
     fprintf(fOut, "SUCCESS");
     return 0;
 }
 
-int validateLine(int i, input in)
+void* validateLine(void *vd)
 {
-    int mkd[in.size];
+    datastruct *ds;
+    ds = (datastruct *)vd;
+    int mkd[ds->info->size];
+    int i = ds->i;
 
-    for (int j = 0; j < in.size; j++)
+    for (int j = 0; j < ds->info->size; j++)
     {
         mkd[j] = 0;
     }
 
-    for (int j = 0; j < in.size; j++)
+    for (int j = 0; j < ds->info->size; j++)
     {
-        if (in.matrix[i][j] < 1 || in.matrix[i][j] > in.size)
+        if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
-            return 1;
+            *ds->invalid = 1; 
         }
 
-        if (mkd[in.matrix[i][j] - 1] != 0)
+        if (mkd[ds->info->matrix[i][j] - 1] != 0) // se o numero ja foi usado anteriormente na linha
         {
-            return 1;
+            *ds->invalid = 1;
         }
-        mkd[in.matrix[i][j] - 1] = 1;
+        mkd[ds->info->matrix[i][j] - 1] = 1;
     }
-
-    return 0;
 }
 
-int validateCol(int j, input in)
+void * validateCol(void *vd)
 {
-    int mkd[in.size];
+    datastruct *ds;
+    ds = (datastruct *)vd;
+    int mkd[ds->info->size];
+    int j = ds->i;
 
-    for (int i = 0; i < in.size; i++)
+    for (int i = 0; i < ds->info->size; i++)
     {
         mkd[i] = 0;
     }
 
-    for (int i = 0; i < in.size; i++)
+    for (int i = 0; i < ds->info->size; i++)
     {
-        if (in.matrix[i][j] < 1 || in.matrix[i][j] > in.size)
+        if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
-            return 1;
+            *ds->invalid = 1;
         }
 
-        if (mkd[in.matrix[i][j] - 1] != 0)
+        if (mkd[ds->info->matrix[i][j] - 1] != 0)
         {
-            return 1;
+            *ds->invalid = 1;
         }
-        mkd[in.matrix[i][j] - 1] = 1;
+        mkd[ds->info->matrix[i][j] - 1] = 1;
     }
-
-    return 0;
 }
 
-int validateSub(int k, input info)
+void* validateSub(void *vd)
 {
+    datastruct *ds;
+    ds = (datastruct *)vd;
+    int mkd[ds->info->size];
+    int k = ds->i;
+    int groupI = k / ds->info->b;
+    int groupJ = k % ds->info->b;
+    int startI = groupI * ds->info->a; // ponto de partida do grupo
+    int startJ = groupJ * ds->info->b;
 
-    int mkd[info.size];
-    int groupI = k / info.b;
-    int groupJ = k % info.b;
-    int startI = groupI * info.a;
-    int startJ = groupJ * info.b;
-
-    for (int i = 0; i < info.size; i++)
+    for (int i = 0; i < ds->info->size; i++)
     {
         mkd[i] = 0;
     }
-    for (int z = 0; z < info.size; z++)
+    for (int z = 0; z < ds->info->size; z++)
     {
-        int i = startI + z % info.a;
-        int j = startJ + z / info.b;
-        if (info.matrix[i][j] < 1 || info.matrix[i][j] > info.size)
+        int i = startI + z % ds->info->a;
+        int j = startJ + z / ds->info->b;
+        if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
-            return 1;
+            *ds->invalid = 1;
         }
 
-        if (mkd[info.matrix[i][j] - 1] != 0)
+        if (mkd[ds->info->matrix[i][j] - 1] != 0)
         {
-            return 1;
+            *ds->invalid = 1;
         }
-        mkd[info.matrix[i][j] - 1] = 1;
+        mkd[ds->info->matrix[i][j] - 1] = 1;
     }
-    return 0;
 }
