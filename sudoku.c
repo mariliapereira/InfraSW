@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#define NUM_THREADS 13
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 void *validateLine(void *datastruct);
 void *validateCol(void *datastruct);
 void *validateSub(void *datastruct);
+void *validate(void *datastruct);
 
 typedef struct inputstruct
 {
@@ -20,6 +24,13 @@ typedef struct
     int i;
     int *invalid;
 } datastruct;
+
+typedef struct
+{
+    input *info;
+    int *invalid;
+    int l, r;
+} validation;
 
 int main(int argc, char *argv[])
 {
@@ -68,29 +79,17 @@ int main(int argc, char *argv[])
     }
     int invalid = 0;
 
-    pthread_t threads[3 * n];
+    pthread_t threads[NUM_THREADS];
 
-    for (int i = 0; i < n; i++)
+    int group_size = (3 * n) / NUM_THREADS;
+    for (int i = 0; i < NUM_THREADS; i++)
     {
-        datastruct data;
-        data.info = &info;
-        data.i = i;
-        data.invalid = &invalid;
-        int err;
-
-        err = pthread_create(&threads[i * 3], NULL, (void *)validateCol, (void *)&data);
-        if (err)
-        {
-            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
-            exit(EXIT_FAILURE);
-        }
-        err = pthread_create(&threads[i * 3 + 1], NULL, (void *)validateLine, (void *)&data);
-        if (err)
-        {
-            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
-            exit(EXIT_FAILURE);
-        }
-        err = pthread_create(&threads[i * 3 + 2], NULL, (void *)validateSub, (void *)&data);
+        validation vd;
+        vd.info = &info;
+        vd.l = i * group_size;
+        vd.r = MAX((i + 1) * group_size, 3 * n );
+        vd.invalid = &invalid;
+        int err = pthread_create(&threads[i], NULL, (void *)validate, (void *)&vd);
         if (err)
         {
             fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
@@ -98,7 +97,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    for (int i = 0; i < 3 * n; i++)
+    for (int i = 0; i < NUM_THREADS; i++)
     {
         pthread_join(threads[i], NULL);
     }
@@ -109,6 +108,33 @@ int main(int argc, char *argv[])
     }
     fprintf(fOut, "SUCCESS");
     return 0;
+}
+
+void *validate(void *ptr)
+{
+    validation *vd = (validation *)ptr;
+
+    for (int i = vd->l; i < vd->r; i++)
+    {
+        datastruct data;
+        data.info = vd->info;
+        data.i = i / 3;
+        data.invalid = vd->invalid;
+        int err;
+
+        if (i % 3 == 0)
+        {
+            validateCol((void *)&data);
+        }
+        if (i % 3 == 1)
+        {
+            validateLine((void *)&data);
+        }
+        if (i % 3 == 2)
+        {
+            validateSub((void *)&data);
+        }
+    }
 }
 
 void *validateLine(void *vd)
