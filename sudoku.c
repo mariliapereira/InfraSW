@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-void* validateLine(void *datastruct);
-void* validateCol(void *datastruct);
-void* validateSub(void *datastruct);
+void *validateLine(void *datastruct);
+void *validateCol(void *datastruct);
+void *validateSub(void *datastruct);
 
 typedef struct inputstruct
 {
@@ -68,16 +68,39 @@ int main(int argc, char *argv[])
     }
     int invalid = 0;
 
+    pthread_t threads[3 * n];
+
     for (int i = 0; i < n; i++)
     {
         datastruct data;
         data.info = &info;
         data.i = i;
         data.invalid = &invalid;
-        
-        validateLine(&data);
-        validateCol(&data);
-        validateSub(&data);
+        int err;
+
+        err = pthread_create(&threads[i * 3], NULL, (void *)validateCol, (void *)&data);
+        if (err)
+        {
+            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
+            exit(EXIT_FAILURE);
+        }
+        err = pthread_create(&threads[i * 3 + 1], NULL, (void *)validateLine, (void *)&data);
+        if (err)
+        {
+            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
+            exit(EXIT_FAILURE);
+        }
+        err = pthread_create(&threads[i * 3 + 2], NULL, (void *)validateSub, (void *)&data);
+        if (err)
+        {
+            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (int i = 0; i < 3 * n; i++)
+    {
+        pthread_join(threads[i], NULL);
     }
     if (invalid)
     {
@@ -88,7 +111,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void* validateLine(void *vd)
+void *validateLine(void *vd)
 {
     datastruct *ds;
     ds = (datastruct *)vd;
@@ -104,18 +127,20 @@ void* validateLine(void *vd)
     {
         if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
-            *ds->invalid = 1; 
+            *ds->invalid = 1;
+            break;
         }
 
         if (mkd[ds->info->matrix[i][j] - 1] != 0) // se o numero ja foi usado anteriormente na linha
         {
             *ds->invalid = 1;
+            break;
         }
         mkd[ds->info->matrix[i][j] - 1] = 1;
     }
 }
 
-void * validateCol(void *vd)
+void *validateCol(void *vd)
 {
     datastruct *ds;
     ds = (datastruct *)vd;
@@ -132,17 +157,19 @@ void * validateCol(void *vd)
         if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
             *ds->invalid = 1;
+            break;
         }
 
         if (mkd[ds->info->matrix[i][j] - 1] != 0)
         {
             *ds->invalid = 1;
+            break;
         }
         mkd[ds->info->matrix[i][j] - 1] = 1;
     }
 }
 
-void* validateSub(void *vd)
+void *validateSub(void *vd)
 {
     datastruct *ds;
     ds = (datastruct *)vd;
@@ -164,11 +191,13 @@ void* validateSub(void *vd)
         if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
             *ds->invalid = 1;
+            break;
         }
 
         if (mkd[ds->info->matrix[i][j] - 1] != 0)
         {
             *ds->invalid = 1;
+            break;
         }
         mkd[ds->info->matrix[i][j] - 1] = 1;
     }
