@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#define check(c) if (validateFormatNumbers(fp, c)) return 1;
 
+int validateFormat(FILE * fp);
+int validateFormatNumbers(FILE * fp, char c);
 void *validateLine(void *datastruct);
 void *validateCol(void *datastruct);
 void *validateSub(void *datastruct);
@@ -31,17 +34,23 @@ int main(int argc, char *argv[])
     fOut = fopen("sudoku_msap.out", "w");
     if (fp == NULL)
     {
-        printf("Error to read file");
+        printf("Error to read file\n");
         return -1;
     }
 
+    if(validateFormat(fp))
+    {
+        printf("File out of format\n");
+        return -1;
+    }
+
+    rewind(fp); //volta o ponteiro do começo, pra ler os dados agora que validou o formato
+
     fscanf(fp, "%dx%d", &n, &m);
 
-    // lembrar de fazer tratamento de erro pro formato do arquivo
-
-    if (n != m)
+    if (n != m || n < 1)
     {
-        printf("Invalid number of parameters");
+        printf("Invalid number of parameters\n");
         return -1;
     }
 
@@ -49,7 +58,7 @@ int main(int argc, char *argv[])
 
     if (a * b != m)
     {
-        printf("Invalid number of parameters");
+        printf("Invalid number of parameters\n");
         return -1;
     }
 
@@ -66,6 +75,9 @@ int main(int argc, char *argv[])
             fscanf(fp, "%d", &info.matrix[i][j]);
         }
     }
+
+    fclose(fp);
+
     int invalid = 0;
 
     pthread_t threads[3 * n];
@@ -109,6 +121,60 @@ int main(int argc, char *argv[])
         return 1;
     }
     fprintf(fOut, "SUCCESS");
+    fclose(fOut);
+    return 0;
+}
+
+int validateFormat(FILE * fp)
+{
+    int n, m;
+    char c;
+
+    fscanf(fp, "%d", &n);
+    rewind(fp);
+    check('x');
+    check('\n');
+    check('x');
+    check('\n');
+
+    for(int i = 0; i < n-1; i++)
+    {
+        for(int j = 0; j < n-1; j++)
+        {
+            check(' ');
+        }
+        check('\n');
+    }
+
+    for(int i = 0; i < n-1; i++)
+    {
+        check(' ');
+    }
+    check(EOF);
+
+    return 0;
+}
+
+int validateFormatNumbers(FILE * fp, char c)
+{
+    int i = 0;
+    char x;
+
+    do
+    {
+        i++;
+        x = fgetc(fp);
+    }while(x>='0' && x<='9');
+
+    if(x!=c){
+        return 1;
+    }
+
+    if(i==1)
+    {
+        return 1;
+    }
+    
     return 0;
 }
 
