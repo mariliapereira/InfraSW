@@ -91,21 +91,27 @@ int main(int argc, char *argv[])
         data[i].info = &info;
         data[i].i = i;
         data[i].invalid = &invalid; // ponteiro que vai passar por referência pra variável fora
-        int err;
+        int err = pthread_create(&threads[i], NULL, (void *)validateLine, (void *)&data[i]);
+        if (err)
+        {
+            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
+            exit(EXIT_FAILURE);
+        }
+    }
 
-        err = pthread_create(&threads[i * 3], NULL, (void *)validateCol, (void *)&data[i]);
+    for (int i = 0; i < n; i++)
+    {
+        int err = pthread_create(&threads[i + n], NULL, (void *)validateCol, (void *)&data[i]);
         if (err)
         {
             fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
             exit(EXIT_FAILURE);
         }
-        err = pthread_create(&threads[i * 3 + 1], NULL, (void *)validateLine, (void *)&data[i]);
-        if (err)
-        {
-            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
-            exit(EXIT_FAILURE);
-        }
-        err = pthread_create(&threads[i * 3 + 2], NULL, (void *)validateSub, (void *)&data[i]);
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+        int err = pthread_create(&threads[i + 2*n], NULL, (void *)validateSub, (void *)&data[i]);
         if (err)
         {
             fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
@@ -255,7 +261,7 @@ void *validateSub(void *vd)
     ds = (datastruct *)vd;
     int mkd[ds->info->size];
     int k = ds->i;
-    //lógica: a linhas tamanho b e b colunas tamanho a
+    // lógica: a linhas tamanho b e b colunas tamanho a
     int groupI = k / ds->info->b; // em que subgrade eu to
     int groupJ = k % ds->info->b;
     int startI = groupI * ds->info->b; // posição do começo do grupo
@@ -267,9 +273,9 @@ void *validateSub(void *vd)
     }
     for (int z = 0; z < ds->info->size; z++)
     {
-        int dI = z / ds->info->a; // posição dentro do subgrupo
+        int dI = z / ds->info->a; // posição dentro do subgrupo nesse loop
         int dJ = z % ds->info->a;
-        int i = startI + dI; // posição total (começo do grupo + posição nele)
+        int i = startI + dI; // posição atual + começo do grupo pra saber onde to no subgrupo
         int j = startJ + dJ;
         if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
