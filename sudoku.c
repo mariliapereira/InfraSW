@@ -256,10 +256,10 @@ void *validateSub(void *vd)
     int mkd[ds->info->size];
     int k = ds->i;
     //lógica: a linhas tamanho b e b colunas tamanho a
-    int groupI = k % ds->info->b; // em que subgrade eu to
-    int groupJ = k / ds->info->b;
-    int startI = groupI * ds->info->a; // posição do começo do grupo
-    int startJ = groupJ * ds->info->b;
+    int groupI = k / ds->info->b; // em que subgrade eu to
+    int groupJ = k % ds->info->b;
+    int startI = groupI * ds->info->b; // posição do começo do grupo
+    int startJ = groupJ * ds->info->a;
 
     for (int i = 0; i < ds->info->size; i++)
     {
@@ -267,8 +267,8 @@ void *validateSub(void *vd)
     }
     for (int z = 0; z < ds->info->size; z++)
     {
-        int dI = z % ds->info->a; // posição dentro do subgrupo
-        int dJ = z / ds->info->a;
+        int dI = z / ds->info->a; // posição dentro do subgrupo
+        int dJ = z % ds->info->a;
         int i = startI + dI; // posição total (começo do grupo + posição nele)
         int j = startJ + dJ;
         if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
