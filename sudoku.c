@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#define check(c) if (validateFormatNumbers(fp, c)) return 1;
+#define check(c)                      \
+    if (validateFormatNumbers(fp, c)) \
+        return 1; // pra facilitar a chamada repetitiva
 
-int validateFormat(FILE * fp);
-int validateFormatNumbers(FILE * fp, char c);
+int validateFormat(FILE *fp);
+int validateFormatNumbers(FILE *fp, char c);
 void *validateLine(void *datastruct);
 void *validateCol(void *datastruct);
 void *validateSub(void *datastruct);
@@ -14,7 +16,7 @@ typedef struct inputstruct
     int size;
     int a;
     int b;
-    int **matrix;
+    int **matrix; // porque não é só um vetor, é bidimensional, tem que ser **
 } input;
 
 typedef struct
@@ -38,13 +40,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if(validateFormat(fp))
+    if (validateFormat(fp))
     {
         printf("File out of format\n");
         return -1;
     }
 
-    rewind(fp); //volta o ponteiro do começo, pra ler os dados agora que validou o formato
+    rewind(fp); // volta o ponteiro do começo, pra ler os dados agora que validou o formato
 
     fscanf(fp, "%dx%d", &n, &m);
 
@@ -78,7 +80,7 @@ int main(int argc, char *argv[])
 
     fclose(fp);
 
-    int invalid = 0;
+    int invalid = 0; // variável que vai receber o resultado das threads
 
     pthread_t threads[3 * n];
 
@@ -88,7 +90,7 @@ int main(int argc, char *argv[])
     {
         data[i].info = &info;
         data[i].i = i;
-        data[i].invalid = &invalid;
+        data[i].invalid = &invalid; // ponteiro que vai passar por referência pra variável fora
         int err;
 
         err = pthread_create(&threads[i * 3], NULL, (void *)validateCol, (void *)&data[i]);
@@ -115,17 +117,26 @@ int main(int argc, char *argv[])
     {
         pthread_join(threads[i], NULL);
     }
+
     if (invalid)
     {
         fprintf(fOut, "FAIL");
         return 1;
     }
+
     fprintf(fOut, "SUCCESS");
     fclose(fOut);
+
+    for (int i = 0; i < n; i++)
+    {
+        free(info.matrix[i]);
+    }
+    free(info.matrix);
+
     return 0;
 }
 
-int validateFormat(FILE * fp)
+int validateFormat(FILE *fp)
 {
     int n, m;
     char c;
@@ -137,25 +148,26 @@ int validateFormat(FILE * fp)
     check('x');
     check('\n');
 
-    for(int i = 0; i < n-1; i++)
+    for (int i = 0; i < n; i++)
     {
-        for(int j = 0; j < n-1; j++)
+        for (int j = 0; j < n - 1; j++)
         {
             check(' ');
         }
-        check('\n');
+        if (i == n - 1)
+        {
+            check(EOF);
+        }
+        else
+        {
+            check('\n');
+        }
     }
-
-    for(int i = 0; i < n-1; i++)
-    {
-        check(' ');
-    }
-    check(EOF);
 
     return 0;
 }
 
-int validateFormatNumbers(FILE * fp, char c)
+int validateFormatNumbers(FILE *fp, char c)
 {
     int i = 0;
     char x;
@@ -164,17 +176,18 @@ int validateFormatNumbers(FILE * fp, char c)
     {
         i++;
         x = fgetc(fp);
-    }while(x>='0' && x<='9');
+    } while (x >= '0' && x <= '9');
 
-    if(x!=c){
-        return 1;
-    }
-
-    if(i==1)
+    if (x != c) // se o caracter for diferente do passado na chamada
     {
         return 1;
     }
-    
+
+    if (i == 1) // se o arquivo só tiver um caracter é inválido
+    {
+        return 1;
+    }
+
     return 0;
 }
 
@@ -242,9 +255,10 @@ void *validateSub(void *vd)
     ds = (datastruct *)vd;
     int mkd[ds->info->size];
     int k = ds->i;
-    int groupI = k % ds->info->b;  //em que subgrade eu to 
+    //lógica: a linhas tamanho b e b colunas tamanho a
+    int groupI = k % ds->info->b; // em que subgrade eu to
     int groupJ = k / ds->info->b;
-    int startI = groupI * ds->info->a; //posição do começo do grupo
+    int startI = groupI * ds->info->a; // posição do começo do grupo
     int startJ = groupJ * ds->info->b;
 
     for (int i = 0; i < ds->info->size; i++)
@@ -253,9 +267,9 @@ void *validateSub(void *vd)
     }
     for (int z = 0; z < ds->info->size; z++)
     {
-        int dI = z % ds->info->a; //agora é elementos do subgrupo 
-        int dJ = z / ds->info->a; 
-        int i = startI + dI;
+        int dI = z % ds->info->a; // posição dentro do subgrupo
+        int dJ = z / ds->info->a;
+        int i = startI + dI; // posição total (começo do grupo + posição nele)
         int j = startJ + dJ;
         if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
         {
