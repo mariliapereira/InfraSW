@@ -18,8 +18,9 @@ typedef struct inputstruct
 typedef struct
 {
     input *info;
-    int l, r;
     int *invalid;
+    int z;
+    pthread_mutex_t lock;
 } datastruct;
 
 int validateLine(int i, input *info);
@@ -88,19 +89,14 @@ int main(int argc, char *argv[])
     int num_threads = 12;
     int per_thread = (3 * n + num_threads - 1) / num_threads;
     pthread_t threads[num_threads];
-    datastruct data[num_threads];
+    datastruct data;
 
+    data.info = &info;
+    data.invalid = &invalid; // ponteiro que vai passar por referência pra variável fora
+    data.z = 0;
     for (int i = 0; i < num_threads; i++)
     {
-        data[i].info = &info;
-        data[i].l = per_thread * i;
-        data[i].r = per_thread * (i + 1);
-        if (data[i].r > n)
-        {
-            data[i].r = n;
-        }
-        data[i].invalid = &invalid; // ponteiro que vai passar por referência pra variável fora
-        int err = pthread_create(&threads[i], NULL, (void *)validate, (void *)&data[i]);
+        int err = pthread_create(&threads[i], NULL, (void *)validate, (void *)&data);
         if (err)
         {
             fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
@@ -273,7 +269,13 @@ int validateSub(int k, input *info)
 void *validate(void *ptr)
 {
     datastruct *ds = (datastruct *)ptr;
-    for (int i = ds->l; i < ds->r; i++)
+
+    pthread_mutex_lock(&ds->lock);
+    int i = ds->z;
+    ds->z++;
+    pthread_mutex_unlock(&ds->lock);
+
+    while (i < 3 * ds->info->size)
     {
         if (i % 3 == 0)
         {
@@ -287,5 +289,9 @@ void *validate(void *ptr)
         {
             *ds->invalid |= validateSub(i / 3, ds->info);
         }
+        pthread_mutex_lock(&ds->lock);
+        i = ds->z;
+        ds->z++;
+        pthread_mutex_unlock(&ds->lock);
     }
 }
