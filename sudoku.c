@@ -3,16 +3,14 @@
 #include <pthread.h>
 #define check(c)                      \
     if (validateFormatNumbers(fp, c)) \
-        return 1; // pra facilitar a chamada repetitiva
-
-
+        return 1;
 
 typedef struct inputstruct
 {
     int size;
     int a;
     int b;
-    int **matrix; // porque não é só um vetor, é bidimensional, tem que ser **
+    int **matrix;
 } input;
 
 typedef struct
@@ -49,7 +47,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    rewind(fp); // volta o ponteiro do começo, pra ler os dados agora que validou o formato
+    rewind(fp);
 
     fscanf(fp, "%dx%d", &n, &m);
 
@@ -71,10 +69,10 @@ int main(int argc, char *argv[])
     info.a = a;
     info.b = b;
     info.size = n;
-    info.matrix = (int **)malloc(n * sizeof(int *)); // reservar numero de linha
+    info.matrix = (int **)malloc(n * sizeof(int *));
     for (int i = 0; i < n; i++)
     {
-        info.matrix[i] = (int *)malloc(n * sizeof(int)); // reservar numero de coluna
+        info.matrix[i] = (int *)malloc(n * sizeof(int));
         for (int j = 0; j < n; j++)
         {
             fscanf(fp, "%d", &info.matrix[i][j]);
@@ -83,23 +81,24 @@ int main(int argc, char *argv[])
 
     fclose(fp);
 
-    int invalid = 0; // variável que vai receber o resultado das threads
+    int invalid = 0;
 
     int num_threads = 12;
-    int per_thread = (3 * n + num_threads - 1) / num_threads;
+    int per_thread = (3 * n) / num_threads;
+    int per_thread_extra = (3 * n) % num_threads;
     pthread_t threads[num_threads];
     datastruct data[num_threads];
+    int next = 0;
 
     for (int i = 0; i < num_threads; i++)
     {
         data[i].info = &info;
-        data[i].l = per_thread * i;
-        data[i].r = per_thread * (i + 1);
-        if (data[i].r > n)
-        {
-            data[i].r = n;
-        }
-        data[i].invalid = &invalid; // ponteiro que vai passar por referência pra variável fora
+        data[i].l = next;
+        next += per_thread;
+        if (i < per_thread_extra)
+            next++;
+        data[i].r = next;
+        data[i].invalid = &invalid;
         int err = pthread_create(&threads[i], NULL, (void *)validate, (void *)&data[i]);
         if (err)
         {
@@ -173,12 +172,12 @@ int validateFormatNumbers(FILE *fp, char c)
         x = fgetc(fp);
     } while (x >= '0' && x <= '9');
 
-    if (x != c) // se o caracter for diferente do passado na chamada
+    if (x != c)
     {
         return 1;
     }
 
-    if (i == 1) // se o arquivo só tiver um caracter é inválido
+    if (i == 1)
     {
         return 1;
     }
@@ -202,7 +201,7 @@ int validateLine(int i, input *info)
             return 1;
         }
 
-        if (mkd[info->matrix[i][j] - 1] != 0) // se o numero ja foi usado anteriormente na linha
+        if (mkd[info->matrix[i][j] - 1] != 0)
         {
             return 1;
         }
@@ -240,10 +239,9 @@ int validateSub(int k, input *info)
 {
     int mkd[info->size];
 
-    // lógica: a linhas tamanho b e b colunas tamanho a
-    int groupI = k / info->b; // em que subgrade eu to
+    int groupI = k / info->b;
     int groupJ = k % info->b;
-    int startI = groupI * info->b; // posição do começo do grupo
+    int startI = groupI * info->b;
     int startJ = groupJ * info->a;
 
     for (int i = 0; i < info->size; i++)
@@ -252,9 +250,9 @@ int validateSub(int k, input *info)
     }
     for (int z = 0; z < info->size; z++)
     {
-        int dI = z / info->a; // posição dentro do subgrupo nesse loop
+        int dI = z / info->a;
         int dJ = z % info->a;
-        int i = startI + dI; // posição atual + começo do grupo pra saber onde to no subgrupo
+        int i = startI + dI;
         int j = startJ + dJ;
         if (info->matrix[i][j] < 1 || info->matrix[i][j] > info->size)
         {
@@ -277,15 +275,15 @@ void *validate(void *ptr)
     {
         if (i % 3 == 0)
         {
-            *ds->invalid |= validateCol(i / 3, ds->info);
+            *ds->invalid += validateCol(i / 3, ds->info);
         }
         else if (i % 3 == 1)
         {
-            *ds->invalid |= validateLine(i / 3, ds->info);
+            *ds->invalid += validateLine(i / 3, ds->info);
         }
         else
         {
-            *ds->invalid |= validateSub(i / 3, ds->info);
+            *ds->invalid += validateSub(i / 3, ds->info);
         }
     }
 }
