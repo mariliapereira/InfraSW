@@ -3,28 +3,29 @@
 #include <pthread.h>
 #define check(c)                      \
     if (validateFormatNumbers(fp, c)) \
-        return 1; // pra facilitar a chamada repetitiva
-
-int validateFormat(FILE *fp);
-int validateFormatNumbers(FILE *fp, char c);
-void *validateLine(void *datastruct);
-void *validateCol(void *datastruct);
-void *validateSub(void *datastruct);
+        return 1;
 
 typedef struct inputstruct
 {
     int size;
     int a;
     int b;
-    int **matrix; // porque não é só um vetor, é bidimensional, tem que ser **
+    int **matrix;
 } input;
 
 typedef struct
 {
     input *info;
-    int i;
+    int l, r;
     int *invalid;
 } datastruct;
+
+int validateFormat(FILE *fp);
+int validateFormatNumbers(FILE *fp, char c);
+int validateLine(int i, input *info);
+int validateCol(int j, input *info);
+int validateSub(int k, input *info);
+void *validate(void *datastruct);
 
 int main(int argc, char *argv[])
 {
@@ -46,7 +47,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    rewind(fp); // volta o ponteiro do começo, pra ler os dados agora que validou o formato
+    rewind(fp);
 
     fscanf(fp, "%dx%d", &n, &m);
 
@@ -68,10 +69,10 @@ int main(int argc, char *argv[])
     info.a = a;
     info.b = b;
     info.size = n;
-    info.matrix = (int **)malloc(n * sizeof(int *)); // reservar numero de linha
+    info.matrix = (int **)malloc(n * sizeof(int *));
     for (int i = 0; i < n; i++)
     {
-        info.matrix[i] = (int *)malloc(n * sizeof(int)); // reservar numero de coluna
+        info.matrix[i] = (int *)malloc(n * sizeof(int));
         for (int j = 0; j < n; j++)
         {
             fscanf(fp, "%d", &info.matrix[i][j]);
@@ -80,38 +81,25 @@ int main(int argc, char *argv[])
 
     fclose(fp);
 
-    int invalid = 0; // variável que vai receber o resultado das threads
+    int invalid = 0;
 
-    pthread_t threads[3 * n];
+    int num_thread = 12;
+    pthread_t threads[num_thread];
+    datastruct data[num_thread];
+    int per_thread = (n * 3) / num_thread;
+    int per_thread_extra = (n * 3) % num_thread;
+    int next = 0;
 
-    datastruct data[n];
-
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < num_thread; i++)
     {
         data[i].info = &info;
-        data[i].i = i;
-        data[i].invalid = &invalid; // ponteiro que vai passar por referência pra variável fora
-        int err = pthread_create(&threads[i], NULL, (void *)validateLine, (void *)&data[i]);
-        if (err)
-        {
-            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        int err = pthread_create(&threads[i + n], NULL, (void *)validateCol, (void *)&data[i]);
-        if (err)
-        {
-            fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        int err = pthread_create(&threads[i + 2*n], NULL, (void *)validateSub, (void *)&data[i]);
+        data[i].l = next;
+        next += per_thread;
+        if (i < per_thread_extra)
+            next++;
+        data[i].r = next;
+        data[i].invalid = &invalid;
+        int err = pthread_create(&threads[i], NULL, (void *)validate, (void *)&data[i]);
         if (err)
         {
             fprintf(stderr, "Error - pthread_create() return code: %d\n", err);
@@ -184,12 +172,12 @@ int validateFormatNumbers(FILE *fp, char c)
         x = fgetc(fp);
     } while (x >= '0' && x <= '9');
 
-    if (x != c) // se o caracter for diferente do passado na chamada
+    if (x != c)
     {
         return 1;
     }
 
-    if (i == 1) // se o arquivo só tiver um caracter é inválido
+    if (i == 1)
     {
         return 1;
     }
@@ -197,97 +185,99 @@ int validateFormatNumbers(FILE *fp, char c)
     return 0;
 }
 
-void *validateLine(void *vd)
+int validateLine(int i, input *info)
 {
-    datastruct *ds;
-    ds = (datastruct *)vd;
-    int mkd[ds->info->size];
-    int i = ds->i;
+    int mkd[info->size];
 
-    for (int j = 0; j < ds->info->size; j++)
+    for (int j = 0; j < info->size; j++)
     {
         mkd[j] = 0;
     }
 
-    for (int j = 0; j < ds->info->size; j++)
+    for (int j = 0; j < info->size; j++)
     {
-        if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
+        if (info->matrix[i][j] < 1 || info->matrix[i][j] > info->size)
         {
-            *ds->invalid = 1;
-            break;
+            return 1;
         }
 
-        if (mkd[ds->info->matrix[i][j] - 1] != 0) // se o numero ja foi usado anteriormente na linha
+        if (mkd[info->matrix[i][j] - 1] != 0)
         {
-            *ds->invalid = 1;
-            break;
+            return 1;
         }
-        mkd[ds->info->matrix[i][j] - 1] = 1;
+        mkd[info->matrix[i][j] - 1] = 1;
     }
+    return 0;
 }
 
-void *validateCol(void *vd)
+int validateCol(int j, input *info)
 {
-    datastruct *ds;
-    ds = (datastruct *)vd;
-    int mkd[ds->info->size];
-    int j = ds->i;
+    int mkd[info->size];
 
-    for (int i = 0; i < ds->info->size; i++)
+    for (int i = 0; i < info->size; i++)
     {
         mkd[i] = 0;
     }
 
-    for (int i = 0; i < ds->info->size; i++)
+    for (int i = 0; i < info->size; i++)
     {
-        if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
+        if (info->matrix[i][j] < 1 || info->matrix[i][j] > info->size)
         {
-            *ds->invalid = 1;
-            break;
+            return 1;
         }
 
-        if (mkd[ds->info->matrix[i][j] - 1] != 0)
+        if (mkd[info->matrix[i][j] - 1] != 0)
         {
-            *ds->invalid = 1;
-            break;
+            return 1;
         }
-        mkd[ds->info->matrix[i][j] - 1] = 1;
+        mkd[info->matrix[i][j] - 1] = 1;
     }
+    return 0;
 }
 
-void *validateSub(void *vd)
+int validateSub(int k, input *info)
 {
-    datastruct *ds;
-    ds = (datastruct *)vd;
-    int mkd[ds->info->size];
-    int k = ds->i;
-    // lógica: a linhas tamanho b e b colunas tamanho a
-    int groupI = k / ds->info->b; // em que subgrade eu to
-    int groupJ = k % ds->info->b;
-    int startI = groupI * ds->info->b; // posição do começo do grupo
-    int startJ = groupJ * ds->info->a;
+    int mkd[info->size];
+    int groupI = k / info->b;
+    int groupJ = k % info->b;
+    int startI = groupI * info->b;
+    int startJ = groupJ * info->a;
 
-    for (int i = 0; i < ds->info->size; i++)
+    for (int i = 0; i < info->size; i++)
     {
         mkd[i] = 0;
     }
-    for (int z = 0; z < ds->info->size; z++)
+    for (int z = 0; z < info->size; z++)
     {
-        int dI = z / ds->info->a; // posição dentro do subgrupo nesse loop
-        int dJ = z % ds->info->a;
-        int i = startI + dI; // posição atual + começo do grupo pra saber onde to no subgrupo
+        int dI = z / info->a;
+        int dJ = z % info->a;
+        int i = startI + dI;
         int j = startJ + dJ;
-        if (ds->info->matrix[i][j] < 1 || ds->info->matrix[i][j] > ds->info->size)
+        if (info->matrix[i][j] < 1 || info->matrix[i][j] > info->size)
         {
-            *ds->invalid = 1;
-            break;
+            return 1;
         }
 
-        if (mkd[ds->info->matrix[i][j] - 1] != 0)
+        if (mkd[info->matrix[i][j] - 1] != 0)
         {
-            *ds->invalid = 1;
-            break;
+            return 1;
         }
-        mkd[ds->info->matrix[i][j] - 1] = 1;
+        mkd[info->matrix[i][j] - 1] = 1;
+    }
+    return 0;
+}
+
+void *validate(void *vd)
+{
+    datastruct *ds = (datastruct *)vd;
+
+    for (int i = ds->l; i < ds->r; i++)
+    {
+        if (i % 3 == 0)
+            *ds->invalid += validateLine(i/3, ds->info);
+        else if (i % 3 == 1)
+            *ds->invalid += validateCol(i/3, ds->info);
+        else
+            *ds->invalid += validateSub(i/3, ds->info);
     }
 }
