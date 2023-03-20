@@ -1,2 +1,2 @@
 sudoku:  
-	gcc -o sudoku sudoku.c
+	gcc -I. -o sudoku sudoku.c functions.c
