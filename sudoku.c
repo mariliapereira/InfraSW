@@ -12,22 +12,28 @@ int main(int argc, char *argv[])
 
     if (argc != 2)
     {
-        printf("Invalid number of parameters\n");
+        printf("Invalid number of parameters\n"); //garante o número certo de argumentos
         return -1;
     }
 
     fp = fopen(argv[1], "r");
     fOut = fopen("sudoku_msap.out", "w");
-    if (fp == NULL)
+    if (fp == NULL) //caso o arquivo não seja possível de ser aberto
     {
         printf("Error to read file\n");
         return -1;
     }
 
-    if (validateFormat(fp))
+    int formatCheck = validateFormat(fp);
+    if (formatCheck & 1)
     {
         printf("File out of format\n");
         return -1;
+    }
+    else if (formatCheck & 2)
+    {
+        fprintf(fOut, "FAIL");
+        return 0;
     }
 
     rewind(fp);
@@ -36,7 +42,7 @@ int main(int argc, char *argv[])
 
     if (n != m || n < 1)
     {
-        printf("Invalid number of parameters\n");
+        fprintf(fOut,"FAIL"); //se não for uma NxN
         return -1;
     }
 
@@ -44,7 +50,7 @@ int main(int argc, char *argv[])
 
     if (a * b != m)
     {
-        printf("Invalid number of parameters\n");
+        fprintf(fOut,"FAIL"); //conferindo a validade dos argumentos das subgrades
         return -1;
     }
 

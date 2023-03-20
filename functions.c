@@ -1,17 +1,21 @@
 #include "functions.h"
 #define check(c)                      \
-    if (validateFormatNumbers(fp, c)) \
-        return 1;
+        z |= validateFormatNumbers(fp, c);
 
 int validateFormat(FILE *fp)
 {
     int n, m;
     char c;
+    int z = 0;
 
     fscanf(fp, "%d", &n);
     rewind(fp);
     check('x');
     check('\n');
+    if (z != 0)
+    {
+        return 1; //caso de overflow no N
+    }
     check('x');
     check('\n');
 
@@ -19,19 +23,19 @@ int validateFormat(FILE *fp)
     {
         for (int j = 0; j < n - 1; j++)
         {
-            check(' ');
+            check(' '); //conferindo espaços
         }
         if (i == n - 1)
         {
-            check(EOF);
+            check(EOF); //a última linha não tem espaço nem \n, é o fim do arquivo
         }
         else
         {
-            check('\n');
+            check('\n'); //toda linha (menos a última) termina em \n
         }
     }
 
-    return 0;
+    return z;
 }
 
 int validateFormatNumbers(FILE *fp, char c)
@@ -50,14 +54,14 @@ int validateFormatNumbers(FILE *fp, char c)
         return 1;
     }
 
-    if (i == 1)
+    if (i == 1) //garantia de que tem pelo menos 1 número
     {
         return 1;
     }
 
-    if (i > 8)
+    if (i > 8) //prevenção de Overflow
     {
-        return 1;
+        return 2;
     }
     
     return 0;
