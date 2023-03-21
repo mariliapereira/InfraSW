@@ -168,4 +168,5 @@ void *validate(void *vd)
         else
             *ds->invalid += validateSub(i/3, ds->info);
     }
+    return NULL;
 }
