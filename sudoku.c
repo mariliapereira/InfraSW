@@ -24,16 +24,10 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int formatCheck = validateFormat(fp);
-    if (formatCheck & 1)
+    if (validateFormat(fp))
     {
-        printf("File out of format\n");
+        printf("File out of format\n"); //detecta char errado ou número inválido
         return -1;
-    }
-    else if (formatCheck & 2)
-    {
-        fprintf(fOut, "FAIL");
-        return 0;
     }
 
     rewind(fp);

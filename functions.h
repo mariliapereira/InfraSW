@@ -18,7 +18,7 @@ typedef struct
 } datastruct;
 
 int validateFormat(FILE *fp);
-int validateFormatNumbers(FILE *fp, char c);
+int validateFormatNumbers(FILE *fp, char c, int n);
 int validateLine(int i, input *info);
 int validateCol(int j, input *info);
 int validateSub(int k, input *info);

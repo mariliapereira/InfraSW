@@ -1,21 +1,16 @@
 #include "functions.h"
 #define check(c)                      \
-        z |= validateFormatNumbers(fp, c);
+    if (validateFormatNumbers(fp, c, n)) \
+        return 1;
 
 int validateFormat(FILE *fp)
 {
     int n, m;
-    char c;
-    int z = 0;
 
     fscanf(fp, "%d", &n);
     rewind(fp);
     check('x');
     check('\n');
-    if (z != 0)
-    {
-        return 1; //caso de overflow no N
-    }
     check('x');
     check('\n');
 
@@ -35,20 +30,28 @@ int validateFormat(FILE *fp)
         }
     }
 
-    return z;
+    return 0;
 }
 
-int validateFormatNumbers(FILE *fp, char c)
+int validateFormatNumbers(FILE *fp, char c, int n)
 {
-    int i = 0;
+    int i = 0, z = 0;
     char x;
 
     do
     {
         i++;
         x = fgetc(fp);
+        if (x >= '0' && x <= '9')
+        {
+            z = z * 10 + x - '0';
+        }
     } while (x >= '0' && x <= '9');
 
+    if (z > n || z < 1) //caso o número seja maior que N
+    {
+        return 1;
+    }
     if (x != c)
     {
         return 1;
@@ -61,7 +64,7 @@ int validateFormatNumbers(FILE *fp, char c)
 
     if (i > 8) //prevenção de Overflow
     {
-        return 2;
+        return 1;
     }
     
     return 0;
