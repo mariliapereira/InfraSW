@@ -1,0 +1,6 @@
+*.txt
+*.tar
+*.py
+test.sh
+sudoku
+sudoku_msap.out
