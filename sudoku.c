@@ -33,10 +33,9 @@ int main(int argc, char *argv[])
     rewind(fp);
 
     fscanf(fp, "%dx%d", &n, &m);
-
     if (n != m || n < 1)
     {
-        fprintf(fOut,"FAIL"); //se não for uma NxN
+        printf("File out of format\n"); //se não for uma NxN
         return -1;
     }
 
@@ -44,7 +43,7 @@ int main(int argc, char *argv[])
 
     if (a * b != m)
     {
-        fprintf(fOut,"FAIL"); //conferindo a validade dos argumentos das subgrades
+        printf("File out of format\n"); //conferindo a validade dos argumentos das subgrades
         return -1;
     }
 
@@ -53,9 +52,18 @@ int main(int argc, char *argv[])
     info.b = b;
     info.size = n;
     info.matrix = (int **)malloc(n * sizeof(int *));
+    if(info.matrix == NULL)
+    {
+        exit(EXIT_FAILURE);
+    }
     for (int i = 0; i < n; i++)
     {
         info.matrix[i] = (int *)malloc(n * sizeof(int));
+        if(info.matrix[i] == NULL)
+        {
+            exit(EXIT_FAILURE);
+        }
+
         for (int j = 0; j < n; j++)
         {
             fscanf(fp, "%d", &info.matrix[i][j]);
