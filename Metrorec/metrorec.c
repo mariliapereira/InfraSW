@@ -1,12 +1,7 @@
 #include <pthread.h>
-#include <time.h>
 
 struct estacao {
-    pthread_cond_t car_ready;    
-    pthread_cond_t ready_to_embark;   
-    pthread_cond_t ready_to_leave;
-    pthread_cond_t station_empty;
-
+    pthread_cond_t car_ready, ready_to_embark, ready_to_leave, station_empty;
     pthread_mutex_t mutex;
     int free_spots;
     int passengers;
@@ -17,9 +12,7 @@ void estacao_init(struct estacao *station) {
     station->passengers = 0;    
     station->embarking = 0;
     station->free_spots = 0;
-
     pthread_mutex_init(&station->mutex, NULL);
-
     pthread_cond_init(&station->car_ready, NULL);     
     pthread_cond_init(&station->ready_to_embark, NULL); 
     pthread_cond_init(&station->ready_to_leave, NULL);
@@ -50,7 +43,6 @@ void estacao_espera_pelo_vagao(struct estacao * station) {
     }
     station->embarking++;        
     station->passengers--;
-
     pthread_cond_signal(&station->ready_to_embark);
     pthread_mutex_unlock(&station->mutex);
 }
@@ -62,7 +54,6 @@ void estacao_embarque(struct estacao * station) {
     }
     station->embarking--;    
     station->free_spots--;
-
     if(station->free_spots == 0 || (station->passengers == 0 && station->embarking == 0)) {
         pthread_cond_signal(&station->ready_to_leave);
     }
