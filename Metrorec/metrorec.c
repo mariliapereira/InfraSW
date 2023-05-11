@@ -22,7 +22,7 @@ void estacao_init(struct estacao *station) {
 void estacao_preecher_vagao(struct estacao * station, int assentos) {
     pthread_mutex_lock(&station->mutex);
     while(station->free_spots > 0) {
-        printf("another car waiting with %d free spots\n", station->free_spots);
+        //printf("another car waiting with %d free spots\n", station->free_spots);
         pthread_cond_wait(&station->station_empty, &station->mutex);
     }   
     station->free_spots = assentos; 
