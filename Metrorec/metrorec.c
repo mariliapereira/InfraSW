@@ -1,7 +1,10 @@
 #include <pthread.h>
 
 struct estacao {
-    pthread_cond_t car_ready, ready_to_embark, ready_to_leave, station_empty;
+    pthread_cond_t car_ready;    
+    pthread_cond_t ready_to_embark;   
+    pthread_cond_t ready_to_leave;
+    pthread_cond_t station_empty;
     pthread_mutex_t mutex;
     int free_spots;
     int passengers;
