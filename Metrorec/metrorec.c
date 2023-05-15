@@ -4,24 +4,24 @@ struct estacao {
     pthread_cond_t car_ready;    
     pthread_cond_t ready_to_embark;   
     pthread_cond_t ready_to_leave;
-    pthread_cond_t car_left;
-    pthread_cond_t station_empty; 
+    pthread_cond_t car_left; 
+    pthread_cond_t station_empty;
     pthread_mutex_t mutex;
-    int free_spots;
-    int passengers;
+    //int passengers;
     int embarking;
+    int free_spots;
 };
 
 void estacao_init(struct estacao *station) {
-    station->passengers = 0;    
+    //station->passengers = 0;    
     station->embarking = 0;
     station->free_spots = 0;
-    pthread_mutex_init(&station->mutex, NULL);
     pthread_cond_init(&station->car_ready, NULL);     
     pthread_cond_init(&station->ready_to_embark, NULL); 
     pthread_cond_init(&station->ready_to_leave, NULL);
     pthread_cond_init(&station->car_left, NULL);
     pthread_cond_init(&station->station_empty, NULL);
+    pthread_mutex_init(&station->mutex, NULL);
 }
 
 void estacao_preencher_vagao(struct estacao * station, int assentos) {
@@ -42,13 +42,13 @@ void estacao_preencher_vagao(struct estacao * station, int assentos) {
 
 void estacao_espera_pelo_vagao(struct estacao * station) {
     pthread_mutex_lock(&station->mutex);   
-    station->passengers++; 
+    //station->passengers++; 
     //printf("%d passengers waiting\n", station->passengers);
     while (station->free_spots == station->embarking) {
         pthread_cond_wait(&station->car_ready, &station->mutex);
     }
     station->embarking++;        
-    station->passengers--;
+    //station->passengers--;
     pthread_cond_signal(&station->ready_to_embark);
     pthread_mutex_unlock(&station->mutex);
 }
@@ -61,7 +61,8 @@ void estacao_embarque(struct estacao * station) {
     station->embarking--;    
     station->free_spots--;
     //printf("Embarque realizado\n");
-    if(station->free_spots == 0 || (station->passengers == 0 && station->embarking == 0)) {
+    //if(station->free_spots == 0 || (station->passengers == 0 && station->embarking == 0)) {
+    if(station->free_spots == 0 || station->embarking == 0) {
         pthread_cond_signal(&station->ready_to_leave);
         pthread_cond_wait(&station->car_left, &station->mutex);
     }
