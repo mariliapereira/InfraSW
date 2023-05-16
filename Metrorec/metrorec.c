@@ -1,27 +1,27 @@
 #include <pthread.h>
 
 struct estacao {
+    pthread_mutex_t mutex;
     pthread_cond_t car_ready;    
     pthread_cond_t ready_to_embark;   
     pthread_cond_t ready_to_leave;
     pthread_cond_t car_left; 
     pthread_cond_t station_empty;
-    pthread_mutex_t mutex;
     //int passengers;
     int embarking;
     int free_spots;
 };
 
 void estacao_init(struct estacao *station) {
-    //station->passengers = 0;    
-    station->embarking = 0;
-    station->free_spots = 0;
+    pthread_mutex_init(&station->mutex, NULL);
     pthread_cond_init(&station->car_ready, NULL);     
     pthread_cond_init(&station->ready_to_embark, NULL); 
     pthread_cond_init(&station->ready_to_leave, NULL);
     pthread_cond_init(&station->car_left, NULL);
     pthread_cond_init(&station->station_empty, NULL);
-    pthread_mutex_init(&station->mutex, NULL);
+    //station->passengers = 0;    
+    station->embarking = 0;
+    station->free_spots = 0;
 }
 
 void estacao_preencher_vagao(struct estacao * station, int assentos) {
@@ -64,6 +64,8 @@ void estacao_embarque(struct estacao * station) {
     //if(station->free_spots == 0 || (station->passengers == 0 && station->embarking == 0)) {
     if(station->free_spots == 0 || station->embarking == 0) {
         pthread_cond_signal(&station->ready_to_leave);
+    }
+    if(station->embarking == 0){
         pthread_cond_wait(&station->car_left, &station->mutex);
     }
     pthread_mutex_unlock(&station->mutex); 
